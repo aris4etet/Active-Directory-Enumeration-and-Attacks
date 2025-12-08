@@ -89,6 +89,7 @@ Useful for:
 
 ```bash
 enum4linux-ng -P <DC_IP> -oA <basename>
+enum4linux-ng -P 172.16.5.5 -oA ilfreight     
 ```
 
 You get:
