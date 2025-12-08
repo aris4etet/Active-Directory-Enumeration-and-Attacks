@@ -51,7 +51,7 @@ Goal = same as Linux/Responder:
 
 **Workflow:**
 
-1. Load the module
+1. Load the module ```c Import-Module .\Inveigh.ps1```
 2. Start Inveigh with LLMNR/NBNS spoofing enabled
 3. Let it sit and watch the console scroll
 4. Use the built-in console to list hashes / usernames
