@@ -31,7 +31,72 @@ The data points above can be gathered in many ways. Numerous websites and tools 
 | **Cloud & Dev Storage**            | GitHub, public AWS S3 / Azure Blob containers, Google dork searches to find exposed storage or code containing secrets                                                                                                                                                                                   |
 | **Breach Data Sources**            | HaveIBeenPwned (check corporate email exposure), Dehashed (search corporate emails for plaintext passwords or hashes). Reused or leaked credentials can be tested against exposed login portals (Citrix, RDS, OWA, Office 365, VPN, VMware Horizon, custom apps, etc.) that may authenticate against AD. |
 
+
 ---
 
+# Enumerating Security Controls (Quick Overview)
 
-If you want, I can convert this into a different Markdown flavor (e.g., GitHub README style with badges), add YAML front matter, or produce a printable PDF from the `.md`. Which would you prefer?
+After gaining a foothold, one of the first steps is understanding **what defensive controls are active** in the environment. This helps us adjust our tooling, avoid detection, and decide when to "live off the land" using built-in Windows utilities. Different hosts may have different policies applied, so checking from multiple machines is useful.
+
+---
+
+## 🔹 Windows Defender
+
+Modern Windows Defender can block many common enumeration tools. We can quickly check its status with:
+
+```powershell
+Get-MpComputerStatus
+```
+
+If **RealTimeProtectionEnabled = True**, Defender is actively monitoring the system.
+
+---
+
+## 🔹 AppLocker
+
+AppLocker restricts what executables, scripts, and installers users can run. Organizations often block `powershell.exe` or `cmd.exe`, but other PowerShell paths (e.g., SysWOW64) may still work.
+
+Check rules with:
+
+```powershell
+Get-AppLockerPolicy -Effective | select -ExpandProperty RuleCollections
+```
+
+This tells us what is allowed or denied and helps identify bypass opportunities.
+
+---
+
+## 🔹 PowerShell Constrained Language Mode
+
+Some environments restrict PowerShell features, blocking many offensive functions.
+
+Check your mode:
+
+```powershell
+$ExecutionContext.SessionState.LanguageMode
+```
+
+* **FullLanguage** = normal
+* **ConstrainedLanguage** = heavily restricted
+
+---
+
+## 🔹 LAPS (Local Administrator Password Solution)
+
+LAPS rotates local admin passwords to prevent lateral movement. We can enumerate:
+
+* Who can read LAPS passwords
+* Which machines have LAPS enabled
+* Passwords themselves (if our user has permission)
+
+Examples:
+
+```powershell
+Find-LAPSDelegatedGroups
+Find-AdmPwdExtendedRights
+Get-LAPSComputers
+```
+
+This helps identify targets where LAPS is misconfigured or overly permissive.
+
+---
