@@ -175,4 +175,18 @@ This automatically identifies the ENTIRE attack chain we manually enumerated.
 8. If no tools allowed → use Get-Acl + Get-ADUser fallback.
 
 ---
+Examples 
+```c
+$sid1 = Convert-NameToSid forend
+Get-ObjectACL -SamAccountName dpayne | 
+    Where-Object { $_.SecurityIdentifier -eq $sid1 } |
+    Select-Object ObjectDN, IdentityReference, ActiveDirectoryRights, ObjectType
 
+
+Get-ObjectACL -SamAccountName "GPO Management" |
+    Where-Object { $_.SecurityIdentifier -eq $sid1 } |
+    Select-Object IdentityReference, ActiveDirectoryRights, ObjectAceType
+
+
+
+```
