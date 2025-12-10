@@ -272,3 +272,5 @@ Explanation:
 Get-DomainUser | ? { $_.userAccountControl -band 0x20 -and $_.samAccountName -like "y*" } | select samAccountName
 ```
 
+## Find another user with the "Do not require Kerberos pre-authentication setting" enabled. Perform an ASREPRoasting attack against this user, crack the hash, and submit their cleartext password as your answe
+
