@@ -10,7 +10,7 @@ We will use responder for enumeration
 
 **Identify network interface: ens224**
 
-![](/imgs/Lab/Lab28/1.png)
+![](imgs/Lab/Lab28/1.png)
 
 **Run responder**
 
@@ -22,7 +22,7 @@ We get the [hash](/docs/assess_ab920_hash.txt) of the account `AB920`
 
 - **Answer:** AB920
 
-![](/imgs/Lab/Lab28/2.png)
+![](imgs/Lab/Lab28/2.png)
 
 ## **What is this user's cleartext password?**
 
